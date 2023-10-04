@@ -2,4 +2,4 @@
 build/*
 install/*
 log/*
-models/*
+models/*.pth
