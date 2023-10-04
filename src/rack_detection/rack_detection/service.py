@@ -121,7 +121,7 @@ class MinimalService(Node):
             if key == ord('s') or key ==ord('S'):
                 if not os.path.isdir('capture_images'):
                     os.makedirs('capture_images')
-                    print ("directory is creasted.")
+                    print ("directory is created.")
                 current_time = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
                 filename = f"capture_images/{current_time}_captured.jpg"
     
@@ -235,6 +235,10 @@ class InboxGraspPrediction():
             self._sam_checkpoint = 'models/sam_vit_h_4b8939.pth'
         else: #1.2 GB
             self._sam_checkpoint = 'models/sam_vit_l_0b3195.pth'
+
+        if not os.path.exists(self._sam_checkpoint):
+            print ("model file is not available, check the instruction in the readme.md ...")
+            return 
 
         self._device = device
 
