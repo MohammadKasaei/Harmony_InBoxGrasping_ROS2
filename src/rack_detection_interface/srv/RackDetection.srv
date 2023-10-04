@@ -1,0 +1,7 @@
+int64 dbg_vis
+int64 show_masks_point
+int64 show_raw_image
+---
+geometry_msgs/Pose pose
+float64 probablity 
+int64 execute
