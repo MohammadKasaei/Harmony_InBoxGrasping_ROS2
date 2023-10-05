@@ -31,11 +31,13 @@ def main():
     rclpy.init()
 
     minimal_client = MinimalClientAsync()
+
     response = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
     minimal_client.get_logger().info(
-        'Params : %d , %d , %d response: pos:(%f,%f,%f), prob: %f, exec: %d' %
+        'Params : %d , %d , %d response: pos:(%f,%f,%f), angle: %f, prob: %f, exec: %d' %
         (int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), \
          response.pose.position.x,response.pose.position.y,response.pose.position.z,
+         response.pose.orientation.z,
          response.probablity,
          response.execute))
 

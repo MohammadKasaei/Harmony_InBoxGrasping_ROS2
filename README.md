@@ -31,6 +31,7 @@ After downloading, put the models into `models/` folder which is next to the src
 # Compile and Running
 To compile the code, use the following commands inside the directory:
 ```
+cd Harmony_InBoxGrasping_ROS2
 colcon build
 ```
 When colcon has completed building successfully, the output will be in the install directory. Before you can use any of the installed executables or libraries, you will need to add them to your path and library paths using the following command:
@@ -45,6 +46,7 @@ ros2 run rack_detection service
 
 Then, open another terminal, go to the directory (`Harmony_InBoxGrasping_ROS2`) and again source the install directory:
 ```
+cd Harmony_InBoxGrasping_ROS2
 source install/local_setup.bash 
 ```
 after sourcing, run the client node using the following command:

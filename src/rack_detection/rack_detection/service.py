@@ -2,27 +2,24 @@ import rclpy
 from rclpy.node import Node
 
 from rack_detection_interface.srv import RackDetection
-
 from sensor_msgs.msg import CompressedImage, Image
 from geometry_msgs.msg import Pose
+from sensor_msgs.msg import CameraInfo
 
-from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
 
 import os
-import matplotlib.pyplot as plt
+import datetime
+
 import torch
-import numpy as np
 
 from segment_anything import sam_model_registry 
 from segment_anything import SamAutomaticMaskGenerator
 from segment_anything import SamPredictor
-import datetime
 
-
-from sensor_msgs.msg import CameraInfo
 
 cv_bridge = CvBridge()
 
@@ -72,6 +69,7 @@ class MinimalService(Node):
 
     def rack_detection_callback(self, request, response):
         
+        print ("-"*40)
         rack_pos = Pose()
         if (self.rgb_image is None) or (self.depth_image is None):
             rack_pos.position.x = -1.0
@@ -103,8 +101,11 @@ class MinimalService(Node):
                 self.vision.show_mask(mask, plt.gca(),random_color=False)
                 self.vision.show_points(self.vision._input_point, self.vision._input_label, plt.gca())
             gs_list = self.vision.generate_grasp(mask,vis=True)
+
             if len(gs_list)>0:
                 self.grasp_center = gs_list[0][0]
+                self.grasp_angle = gs_list[0][3]
+                
 
             print ("grasp list:\n", gs_list)
             plt.imshow(self.vision.image_rgb)
@@ -157,15 +158,23 @@ class MinimalService(Node):
             
             depth_in_meters = depth_value / 1000.0
             print (f"depth [{depth_pixel_x},{depth_pixel_y}] = {depth_value}")
+            print (f"grasp angle: {self.grasp_angle}")
             #  float(frame[y_center][x_center])*100.0
 
             
-            rack_pos.position.x = float(self.grasp_center[0])
-            rack_pos.position.y = float(self.grasp_center[1])
-            rack_pos.position.z = depth_in_meters
+            x_cam, y_cam, z_cam = self.pixel_to_meter (self.grasp_center[0],self.grasp_center[1],depth_in_meters)
+            
+            # rack_pos.position.x = float(self.grasp_center[0])
+            # rack_pos.position.y = float(self.grasp_center[1])
+            # rack_pos.position.z = depth_in_meters
+            rack_pos.position.x = x_cam
+            rack_pos.position.y = y_cam
+            rack_pos.position.z = z_cam
+            rack_pos.orientation.z = self.grasp_angle
+            
             response.probablity  = 1.0
 
-            self.pixel_to_meter (self.grasp_center[0],self.grasp_center[1],depth_in_meters)
+            
 
         else:
             rack_pos.position.x = -1.0
@@ -394,18 +403,6 @@ class InboxGraspPrediction():
         self._input_point = input_point1        
         self._input_label = np.ones(36)
         
-    def config(self):
-        
-        input_point1 = np.array([330,210]).reshape(1,2)
-        step_x = 10
-        step_y = 12
-        for i in range(3):
-            for j in range(5):
-                input_point1 = np.vstack((input_point1,(input_point1[0,0]+i*step_x,input_point1[0,1]+j*step_y)))
-        
-        self._input_point = input_point1        
-        self._input_label = np.ones(22)
-        
 
     def generate_masks(self,dbg_vis = False):
         # self.image = cv2.imread(image_path)
@@ -451,6 +448,10 @@ class InboxGraspPrediction():
             area = cv2.contourArea(contour)
             if area > 1500 and area < 20000:
                 rect = cv2.minAreaRect(contour)
+                _, _, angle = rect
+                angle = 90-angle if angle>45 else -angle 
+                
+
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)
                 center = np.int16((np.mean(box[:,0]),np.mean(box[:,1])))
@@ -461,7 +462,7 @@ class InboxGraspPrediction():
                 center1 = np.int16(((bs[0,0]+bs[1,0])/2,(bs[0,1]+bs[1,1])/2))        
                 center2 = np.int16(((bs[2,0]+bs[3,0])/2,(bs[2,1]+bs[3,1])/2))        
                 
-                grasp_list.append ([center,center1,center2])
+                grasp_list.append ([center,center1,center2,angle])
                 if vis:
                     cv2.drawContours(self.image_rgb, contours, j, (255, 255, 0), thickness)                
                     cv2.drawContours(self.image_rgb,[box],0,(0,255,255),thickness)
