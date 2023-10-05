@@ -5,7 +5,7 @@ The code requires `python>=3.10`, as well as `pytorch>=2.0.1` and 'CUDA Version:
 
 Install pytorch:
 ```
-pip3 install torch torchvision 
+pip install torch torchvision 
 ```
 
 Install Segment Anything:
