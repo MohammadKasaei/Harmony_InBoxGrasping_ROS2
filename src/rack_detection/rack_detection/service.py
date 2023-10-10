@@ -142,7 +142,6 @@ class MinimalService(Node):
             print (f"grasp angle: {self.grasp_angle}")
             #  float(frame[y_center][x_center])*100.0
 
-            
             x_cam, y_cam, z_cam = self.pixel_to_meter (self.grasp_center[0],self.grasp_center[1],depth_in_meters)
             
             # rack_pos.position.x = float(self.grasp_center[0])

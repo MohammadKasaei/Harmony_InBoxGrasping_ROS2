@@ -77,7 +77,9 @@ class InboxGraspPrediction():
         kernel = np.ones((3,3), np.uint8)
 
         # Apply erosion
-        eroded_image = cv2.erode(dilated, kernel, iterations=13)
+        # eroded_image = cv2.erode(dilated, kernel, iterations=14)
+        eroded_image = cv2.erode(dilated, kernel, iterations=17)
+        
         if vis_output:
             cv2.imshow('eroded', eroded_image)
         
@@ -104,7 +106,7 @@ class InboxGraspPrediction():
                 filtered_contours.append(contour)
 
         # # Define a size threshold (in terms of contour area)
-        min_contour_area = 3000  # Example value, adjust as needed
+        min_contour_area = 1500 #3000  # Example value, adjust as needed
         max_contour_area = 80000  # Example value, adjust as needed
         # Filter contours by size
         filtered_contours2 = [contour for contour in filtered_contours if min_contour_area < cv2.contourArea(contour) < max_contour_area]
@@ -223,7 +225,7 @@ class InboxGraspPrediction():
         grasp_list = []
         for contour in contours:
             area = cv2.contourArea(contour)
-            if area > 1500 and area < 20000:
+            if area > 1500 and area < 27000:
                 rect = cv2.minAreaRect(contour)
                 _, _, angle = rect
                 angle = 90-angle if angle>45 else -angle 
@@ -248,10 +250,10 @@ class InboxGraspPrediction():
                     cv2.circle(self.image_rgb, center=center2, radius=10, color = (255,0,255), thickness=5) 
             j += 1
 
-        if grasp_list == [] :
-            for contour in contours:
-                area = cv2.contourArea(contour) 
-                print (f"contour area:{area}")
+        # if grasp_list == [] :
+        for i, contour in enumerate (contours):
+            area = cv2.contourArea(contour) 
+            print (f"contour area {i}: {area}")
         
 
         return grasp_list
