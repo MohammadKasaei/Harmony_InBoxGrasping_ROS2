@@ -32,10 +32,21 @@ def main():
 
     minimal_client = MinimalClientAsync()
 
-    response = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
+    if len(sys.argv) > 3 :
+        dbg_vis = int(sys.argv[1])
+        show_masks_point = int(sys.argv[2])
+        show_raw_image = int(sys.argv[3])
+    else:
+        dbg_vis = 0
+        show_masks_point = 0
+        show_raw_image   = 0
+
+    
+
+    response = minimal_client.send_request(dbg_vis, show_masks_point,show_raw_image )
     minimal_client.get_logger().info(
         'Params : %d , %d , %d response: pos:(%f,%f,%f), angle: %f, prob: %f, exec: %d' %
-        (int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), \
+        (dbg_vis, show_masks_point,show_raw_image , \
          response.pose.position.x,response.pose.position.y,response.pose.position.z,
          response.pose.orientation.z,
          response.probablity,

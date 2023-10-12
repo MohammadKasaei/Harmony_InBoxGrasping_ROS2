@@ -35,20 +35,24 @@ class MinimalService(Node):
 
         rgb_subscription = self.create_subscription(
         CompressedImage,
-        "/myumi_005/sensors/top_azure/rgb/image_raw/compressed",  # Replace with your RGB compressed topic
+        "/myumi_005/sensors/top_azure/rgb/image_raw/compressed",  
         self.rgb_image_callback,
         1,
         )
 
         depth_subscription = self.create_subscription(
             Image,
-            # "/myumi_005/sensors/top_azure/depth/image_raw",  # Replace with your depth topic
             "/myumi_005/sensors/top_azure/depth_to_rgb/image_raw",
             self.depth_image_callback,
             1,
         )
 
-        camera_info_subscription = self.create_subscription(CameraInfo, '/myumi_005/sensors/top_azure/rgb/camera_info', self.camera_info_callback, 10)
+        camera_info_subscription = self.create_subscription(
+            CameraInfo,
+            '/myumi_005/sensors/top_azure/rgb/camera_info',
+            self.camera_info_callback,
+            10
+        )
 
         torch.cuda.empty_cache()
         # torch.cuda.memory_summary(device=None, abbreviated=False)
@@ -98,6 +102,7 @@ class MinimalService(Node):
             if request.show_masks_point:
                 self.vision.show_mask(mask, plt.gca(),random_color=False)
                 self.vision.show_points(self.vision._input_point, self.vision._input_label, plt.gca())
+                
             gs_list = self.vision.generate_grasp(mask,vis=True)
 
             if len(gs_list)>0:
@@ -153,7 +158,7 @@ class MinimalService(Node):
             rack_pos.position.y = y_cam
             rack_pos.position.z = z_cam
             rack_pos.orientation.z = self.grasp_angle
-            response.probablity  = 1.0
+            response.probablity    = 1.0
 
             if self.self.pointcloud_vis:
                 print(f"Processing PointCloud visualization -> grasp position: ({x_cam}, {y_cam}, {z_cam})")
