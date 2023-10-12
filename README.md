@@ -13,12 +13,17 @@ Install Segment Anything:
 pip install git+https://github.com/facebookresearch/segment-anything.git
 ```
 
+
 The following optional dependencies are necessary for mask post-processing, 
 
 ```
 pip install opencv-python pycocotools numpy matplotlib onnxruntime onnx 
 ```
 
+Install open3d:
+```
+pip install open3d
+```
 
 
 Click the links below to download the checkpoint for the corresponding model type.
