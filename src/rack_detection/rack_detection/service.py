@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
+import open3d as o3d
 
 import os
 import datetime
@@ -25,11 +26,12 @@ cv_bridge = CvBridge()
 
 class MinimalService(Node):
 
-    def __init__(self):
+    def __init__(self, pointcloud_vis=True):
         super().__init__('minimal_service')
 
         self.rgb_image   = None
         self.depth_image = None
+        self.pointcloud_vis = pointcloud_vis
 
         rgb_subscription = self.create_subscription(
         CompressedImage,
@@ -137,12 +139,12 @@ class MinimalService(Node):
             # depth_value = float(raw_depth_image[depth_pixel_y,depth_pixel_x][0])
             depth_value = float(raw_depth_image[depth_pixel_y,depth_pixel_x])
             
-            depth_in_meters = depth_value / 1000.0
+            depth_in_meters = depth_value / 1000
             print (f"depth [{depth_pixel_x},{depth_pixel_y}] = {depth_value}")
             print (f"grasp angle: {self.grasp_angle}")
             #  float(frame[y_center][x_center])*100.0
 
-            x_cam, y_cam, z_cam = self.pixel_to_meter (self.grasp_center[0],self.grasp_center[1],depth_in_meters)
+            x_cam, y_cam, z_cam = self.pixel_to_meter(self.grasp_center[0],self.grasp_center[1],depth_in_meters)
             
             # rack_pos.position.x = float(self.grasp_center[0])
             # rack_pos.position.y = float(self.grasp_center[1])
@@ -152,6 +154,44 @@ class MinimalService(Node):
             rack_pos.position.z = z_cam
             rack_pos.orientation.z = self.grasp_angle
             response.probablity  = 1.0
+
+            if self.self.pointcloud_vis:
+                print(f"Processing PointCloud visualization -> grasp position: ({x_cam}, {y_cam}, {z_cam})")
+                height, weight = self.rgb_image.shape[:2]
+                raw_points = []
+                rgb_points = []
+
+                grasp_point = [[x_cam, y_cam, z_cam]]
+                grasp_color = [[1.0, 0.0, 0.0]]
+
+                grasp_pcd = o3d.geometry.PointCloud()
+                grasp_pcd.points = o3d.utility.Vector3dVector(grasp_point)
+                grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_color)
+
+                for i in range(height):
+                    for j in range(weight):
+                        z = self.depth_image[i][j] / 1000
+                        x = (j - self.cx) * z / self.fx
+                        y = (i - self.cy) * z / self.fy
+                        a = 255
+                        raw_points.append([x, y, z])
+                        rgb_points.append(self.rgb_image[i][j] / 255)
+                
+                scene_pcd = o3d.geometry.PointCloud()
+                scene_pcd.points = o3d.utility.Vector3dVector(raw_points)
+                scene_pcd.colors = o3d.utility.Vector3dVector(rgb_points)
+
+                
+                
+                point = grasp_pcd.points[0]
+                sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.005) #create a small sphere to represent point
+                sphere.translate(point) #translate this sphere to point
+                sphere.paint_uniform_color([1.0, 0.0, 0.0])
+
+                sphere_pcd = sphere.sample_points_uniformly(number_of_points=500)
+                
+                o3d.visualization.draw_geometries([scene_pcd+sphere_pcd])
+
 
         else:
             rack_pos.position.x = -1.0
