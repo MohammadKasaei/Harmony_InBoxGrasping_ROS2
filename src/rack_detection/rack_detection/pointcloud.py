@@ -115,37 +115,72 @@ def main():
     print(f"Processing PointCloud visualization -> grasp position: ({response.pose.position.x}, {response.pose.position.y}, {response.pose.position.z})")
     
 
-    height, weight = minimal_client.rgb_image.shape[:2]
-    raw_points = []
-    rgb_points = []
+    # height, weight = minimal_client.rgb_image.shape[:2]
+    # raw_points = []
+    # rgb_points = []
 
-    grasp_point = [[response.pose.position.x,response.pose.position.y,response.pose.position.z]]
+    # grasp_point = [[response.pose.position.x,response.pose.position.y,response.pose.position.z]]
+    # grasp_color = [[1.0, 0.0, 0.0]]
+
+    # grasp_pcd = o3d.geometry.PointCloud()
+    # grasp_pcd.points = o3d.utility.Vector3dVector(grasp_point)
+    # grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_color)
+
+    # for i in range(height):
+    #     for j in range(weight):
+    #         z = depth_img[i][j] / 1000
+    #         x = (j - minimal_client.cx) * z / minimal_client.fx
+    #         y = (i - minimal_client.cy) * z / minimal_client.fy            
+    #         raw_points.append([x, y, z])
+    #         rgb_points.append(rgb_img[i][j] / 255)
+    
+    # scene_pcd = o3d.geometry.PointCloud()
+    # scene_pcd.points = o3d.utility.Vector3dVector(raw_points)
+    # scene_pcd.colors = o3d.utility.Vector3dVector(rgb_points)
+    
+    # point = grasp_pcd.points[0]
+    # sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.005) #create a small sphere to represent point
+    # sphere.translate(point) #translate this sphere to point
+    # sphere.paint_uniform_color([1.0, 0.0, 0.0])
+
+    # sphere_pcd = sphere.sample_points_uniformly(number_of_points=500)
+    
+    # o3d.visualization.draw_geometries([scene_pcd+sphere_pcd])
+
+    # import numpy as np
+    # import open3d as o3d
+
+    height, width = minimal_client.rgb_image.shape[:2]
+
+    # Grasp point and color
+    grasp_point = [[response.pose.position.x, response.pose.position.y, response.pose.position.z]]
     grasp_color = [[1.0, 0.0, 0.0]]
 
     grasp_pcd = o3d.geometry.PointCloud()
     grasp_pcd.points = o3d.utility.Vector3dVector(grasp_point)
     grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_color)
 
-    for i in range(height):
-        for j in range(weight):
-            z = depth_img[i][j] / 1000
-            x = (j - minimal_client.cx) * z / minimal_client.fx
-            y = (i - minimal_client.cy) * z / minimal_client.fy            
-            raw_points.append([x, y, z])
-            rgb_points.append(rgb_img[i][j] / 255)
-    
+    # Using numpy to generate the point cloud
+    j, i = np.meshgrid(np.arange(width), np.arange(height))
+    z = depth_img / 1000.0
+    x = (j - minimal_client.cx) * z / minimal_client.fx
+    y = (i - minimal_client.cy) * z / minimal_client.fy
+
+    raw_points = np.stack((x, y, z), axis=-1).reshape(-1, 3)
+    rgb_points = rgb_img.reshape(-1, 3) / 255.0
+
     scene_pcd = o3d.geometry.PointCloud()
     scene_pcd.points = o3d.utility.Vector3dVector(raw_points)
     scene_pcd.colors = o3d.utility.Vector3dVector(rgb_points)
-    
+
     point = grasp_pcd.points[0]
-    sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.005) #create a small sphere to represent point
-    sphere.translate(point) #translate this sphere to point
+    sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.005)
+    sphere.translate(point)
     sphere.paint_uniform_color([1.0, 0.0, 0.0])
 
     sphere_pcd = sphere.sample_points_uniformly(number_of_points=500)
-    
-    o3d.visualization.draw_geometries([scene_pcd+sphere_pcd])
+
+    o3d.visualization.draw_geometries([scene_pcd + sphere_pcd])
 
     minimal_client.destroy_node()
     rclpy.shutdown()
