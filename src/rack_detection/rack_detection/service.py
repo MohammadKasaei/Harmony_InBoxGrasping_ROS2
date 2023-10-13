@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
-import open3d as o3d
+# import open3d as o3d
 
 import os
 import datetime
@@ -18,7 +18,6 @@ import datetime
 import torch
 
 from .InboxGraspPrediction import InboxGraspPrediction
-
 # in my laptop we need to set this param to get it run on the GPU, not sure if we need this always.
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512" 
 
@@ -26,12 +25,11 @@ cv_bridge = CvBridge()
 
 class MinimalService(Node):
 
-    def __init__(self, pointcloud_vis=True):
+    def __init__(self):
         super().__init__('minimal_service')
 
         self.rgb_image   = None
         self.depth_image = None
-        self.pointcloud_vis = pointcloud_vis
 
         rgb_subscription = self.create_subscription(
         CompressedImage,
@@ -54,11 +52,10 @@ class MinimalService(Node):
             10
         )
 
-        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()        
         # torch.cuda.memory_summary(device=None, abbreviated=False)
         self.vision = InboxGraspPrediction()
         self.srv = self.create_service(RackDetection, 'rack_detection', self.rack_detection_callback)
-
 
     def camera_info_callback(self, msg: CameraInfo):
         # print ("camera:", msg.k)
@@ -68,9 +65,7 @@ class MinimalService(Node):
         self.cy = msg.k[5]
         # Use these parameters as needed
 
-
     def rack_detection_callback(self, request, response):
-        
         print ("-"*40)
         rack_pos = Pose()
         if (self.rgb_image is None) or (self.depth_image is None):
@@ -159,49 +154,10 @@ class MinimalService(Node):
             rack_pos.position.z = z_cam
             rack_pos.orientation.z = self.grasp_angle
             response.probablity    = 1.0
-
-            if self.self.pointcloud_vis:
-                print(f"Processing PointCloud visualization -> grasp position: ({x_cam}, {y_cam}, {z_cam})")
-                height, weight = self.rgb_image.shape[:2]
-                raw_points = []
-                rgb_points = []
-
-                grasp_point = [[x_cam, y_cam, z_cam]]
-                grasp_color = [[1.0, 0.0, 0.0]]
-
-                grasp_pcd = o3d.geometry.PointCloud()
-                grasp_pcd.points = o3d.utility.Vector3dVector(grasp_point)
-                grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_color)
-
-                for i in range(height):
-                    for j in range(weight):
-                        z = self.depth_image[i][j] / 1000
-                        x = (j - self.cx) * z / self.fx
-                        y = (i - self.cy) * z / self.fy
-                        a = 255
-                        raw_points.append([x, y, z])
-                        rgb_points.append(self.rgb_image[i][j] / 255)
-                
-                scene_pcd = o3d.geometry.PointCloud()
-                scene_pcd.points = o3d.utility.Vector3dVector(raw_points)
-                scene_pcd.colors = o3d.utility.Vector3dVector(rgb_points)
-
-                
-                
-                point = grasp_pcd.points[0]
-                sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.005) #create a small sphere to represent point
-                sphere.translate(point) #translate this sphere to point
-                sphere.paint_uniform_color([1.0, 0.0, 0.0])
-
-                sphere_pcd = sphere.sample_points_uniformly(number_of_points=500)
-                
-                o3d.visualization.draw_geometries([scene_pcd+sphere_pcd])
-
-
         else:
-            rack_pos.position.x = -1.0
-            rack_pos.position.y = -1.0
-            rack_pos.position.z = -1.0
+            rack_pos.position.x  = -1.0
+            rack_pos.position.y  = -1.0
+            rack_pos.position.z  = -1.0
             response.probablity  = 0.0
              
 

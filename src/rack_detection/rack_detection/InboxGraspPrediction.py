@@ -15,10 +15,13 @@ class InboxGraspPrediction():
 
         self._sam_model_type = sam_model
         self._device = device
+
         if self._sam_model_type == "vit_b":   # 375 MB         
             self._sam_checkpoint = 'models/sam_vit_b_01ec64.pth'
+
         elif self._sam_model_type == "vit_h": # 2.6 GB           
             self._sam_checkpoint = 'models/sam_vit_h_4b8939.pth'
+            
         else: #1.2 GB
             self._sam_checkpoint = 'models/sam_vit_l_0b3195.pth'
 
@@ -41,8 +44,8 @@ class InboxGraspPrediction():
         # Define the region of interest (ROI) coordinates
         x_offset = 200  # starting x-coordinate
         y_offset = 10  # starting y-coordinate
-        width  = 700  # width of the ROI
-        height = 350  # height of the ROI
+        width    = 700  # width of the ROI
+        height   = 350  # height of the ROI
         
         # Crop the image using numpy array slicing
         image = self.image[y_offset:y_offset +height, x_offset :x_offset +width].copy()
@@ -185,7 +188,6 @@ class InboxGraspPrediction():
 
     def generate_masks(self,dbg_vis = False):
         # self.image = cv2.imread(image_path)
-        
         center=self.find_box_centre(vis_masks=dbg_vis,vis_output=dbg_vis)
         if center !=-1:
             self.config_params_based_on_box_centre(center)
@@ -197,9 +199,10 @@ class InboxGraspPrediction():
         self.image_rgb = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
         
         self._predictor.set_image(self.image)
+        
         self._masks, self._scores, self._logits = self._predictor.predict(
-            point_coords=self._input_point,
-            point_labels=self._input_label,
+            point_coords = self._input_point,
+            point_labels = self._input_label,
             # multimask_output=True,
             # box=input_box[None, :],
             multimask_output=True,

@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
              'service = rack_detection.service:main',
              'client = rack_detection.client_member_function:main',
+             'visualizer = rack_detection.pointcloud:main',             
         ],
     },
 )
