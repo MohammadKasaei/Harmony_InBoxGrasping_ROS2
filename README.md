@@ -20,9 +20,9 @@ The following optional dependencies are necessary for mask post-processing,
 pip install opencv-python pycocotools numpy matplotlib onnxruntime onnx 
 ```
 
-Install open3d:
+Also install open3d and scikit-image:
 ```
-pip install open3d
+pip install open3d scikit-image
 ```
 
 
