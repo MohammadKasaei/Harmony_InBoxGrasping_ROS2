@@ -22,7 +22,10 @@ setup(
         'console_scripts': [
              'service = rack_detection.service:main',
              'client = rack_detection.client_member_function:main',
-             'visualizer = rack_detection.pointcloud:main',             
+             'visualizer = rack_detection.pointcloud:main',        
+             'service_convnet = rack_detection.service_convnet:main',
+             'client_grasp_predict = rack_detection.client_grasp_prediction:main',
+                  
         ],
     },
 )
