@@ -163,7 +163,9 @@ class MinimalService(Node):
             width = np.linalg.norm ([centere1_x_cam-x_cam,centere1_y_cam-y_cam]) * 2
             print ("legnth", length)
             print ("width", width)
+            print ("angle",self.grasp_angle)
             print ("centre1_z:",centere1_z_cam," centre3_z:",centere3_z_cam)
+
 
             
             rack_pos.position.x = x_cam
@@ -174,11 +176,15 @@ class MinimalService(Node):
 
             if width>0.05 and width< 0.15:
                 if not (centere1_z_cam <0.001 or  centere3_z_cam <0.001 or z_cam < 0.001): 
-                    if length< 0.08:
-                        if z_cam > 0.82: # lower row
+                    if length< 0.16:
+                        if z_cam > 0.80: # lower row
                             # shift the centere (y dim) if neccessary
-                            rack_pos.position.y -= 0.2-length
-
+                            offset_x = (0.2-length)*np.sin(self.grasp_angle*np.pi/180)
+                            offset_y = (0.2-length)*np.cos(self.grasp_angle*np.pi/180)
+                            
+                            print ("offsets:",offset_x,offset_y)
+                            rack_pos.position.x -= offset_x
+                            rack_pos.position.y -= offset_y
 
             if centere1_z_cam <0.001 or  centere3_z_cam <0.001 or z_cam < 0.001 : 
                 response.probablity    = 0.0   
