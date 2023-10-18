@@ -63,6 +63,11 @@ class MinimalService(Node):
         self.fy = msg.k[4]
         self.cx = msg.k[2]
         self.cy = msg.k[5]
+
+        self.vision.fx = msg.k[0]
+        self.vision.fy = msg.k[4]
+        self.vision.cx = msg.k[2]
+        self.vision.cy = msg.k[5]
         # Use these parameters as needed
 
     def rack_detection_callback(self, request, response):
@@ -83,6 +88,8 @@ class MinimalService(Node):
         raw_depth_image = self.depth_image.copy()      
         
         self.vision.image = self.rgb_image.copy()      
+        self.vision.depth = self.depth_image.copy()
+              
         self.grasp_center = None
 
         masks, scores = self.vision.generate_masks(dbg_vis=request.dbg_vis)

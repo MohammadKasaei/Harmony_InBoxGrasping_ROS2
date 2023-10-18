@@ -38,7 +38,34 @@ class InboxGraspPrediction():
         self._predictor = SamPredictor(self._sam)
 
         self.image = None
+        self.depth = None
+        self.fx = 0.01
+        self.fy = 0.01
+        self.cx = 0.01
+        self.cy = 0.01
+        
         # self.config()
+
+    def pixel_to_meter(self,x_pixel, y_pixel, depth):
+        """
+        Convert pixel coordinates and depth to a 3D point in camera's coordinate system (in meters).
+
+        :param x_pixel: x coordinate of the pixel
+        :param y_pixel: y coordinate of the pixel
+        :param depth: depth value at that pixel (in meters)
+        :param fx: focal length in x direction (in pixels)
+        :param fy: focal length in y direction (in pixels)
+        :param cx: principal point x-coordinate (in pixels)
+        :param cy: principal point y-coordinate (in pixels)
+        :return: (X_cam, Y_cam, Z_cam) coordinates in camera's frame (in meters)
+        """
+        x_cam = (x_pixel - self.cx) * depth / self.fx
+        y_cam = (y_pixel - self.cy) * depth / self.fy
+        z_cam = depth
+
+        # print ("camera", x_cam,y_cam,z_cam)
+        
+        return x_cam, y_cam, z_cam
 
     def find_box_centre(self,vis_masks = False,vis_output=False,color_picker = False):
         # Define the region of interest (ROI) coordinates
@@ -116,9 +143,30 @@ class InboxGraspPrediction():
         
 
         if filtered_contours2 != []:
-            # Find the largest contour by area
-            largest_contour = max(filtered_contours2, key=cv2.contourArea)
+            print ("number of racks:", len(filtered_contours2))
+            the_most_left = None
+            if len(filtered_contours2) > 1:
+                for c in filtered_contours2:
+                    moments = cv2.moments(c)
+                    center_x = int(moments['m10'] / moments['m00'])
+                    center_y = int(moments['m01'] / moments['m00'])
+                    # depth_value = float(self.depth[y_offset +center_y, x_offset+center_x])
+                    # print ("depth:",depth_value)
 
+
+                    if the_most_left is None:
+                        the_most_left = c
+                        the_most_left_x = center_x
+                    else:
+                        if the_most_left_x > center_x :
+                            the_most_left = c
+                            the_most_left_x = center_x
+
+                largest_contour = the_most_left
+            else:    
+                # Find the largest contour by area
+                largest_contour = max(filtered_contours2, key=cv2.contourArea)
+                
             # Draw the largest contour on a copy of the original image
             # output = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # Convert grayscale to BGR for colored drawing
 
@@ -183,12 +231,12 @@ class InboxGraspPrediction():
                 input_point1 = np.vstack((input_point1,(input_point1[0,0]+i*step_x,input_point1[0,1]+j*step_y)))
         
         self._input_point = input_point1        
-        self._input_label = np.ones(36-7)
+        self._input_label = np.ones(29)
         
 
     def generate_masks(self,dbg_vis = False):
         # self.image = cv2.imread(image_path)
-        center=self.find_box_centre(vis_masks=dbg_vis,vis_output=dbg_vis)
+        center = self.find_box_centre(vis_masks=dbg_vis,vis_output=dbg_vis)
         if center !=-1:
             self.config_params_based_on_box_centre(center)
         else:
@@ -243,7 +291,7 @@ class InboxGraspPrediction():
                
                 center1 = np.int16(((bs[0,0]+bs[1,0])/2,(bs[0,1]+bs[1,1])/2))        
                 center2 = np.int16(((bs[2,0]+bs[3,0])/2,(bs[2,1]+bs[3,1])/2))   
-                     
+
                 center3 = np.int16(((bs[0,0]+bs[2,0])/2,(bs[0,1]+bs[2,1])/2))        
                 center4 = np.int16(((bs[1,0]+bs[3,0])/2,(bs[1,1]+bs[3,1])/2))        
                
