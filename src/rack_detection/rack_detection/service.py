@@ -102,7 +102,12 @@ class MinimalService(Node):
 
             if len(gs_list)>0:
                 self.grasp_center = gs_list[0][0]
-                self.grasp_angle = gs_list[0][3]
+                center1 = gs_list[0][1]        
+                center2 = gs_list[0][2]        
+                center3 = gs_list[0][3]        
+                center4 = gs_list[0][4]        
+                self.grasp_angle = gs_list[0][5]
+                self.box = gs_list[0][6]
                 
 
             print ("grasp list:\n", gs_list)
@@ -128,32 +133,61 @@ class MinimalService(Node):
            
         cv2.destroyAllWindows()
 
-        print ("depth size:",self.depth_image.shape)
-        print ("image size:",self.rgb_image.shape)
-        
+        # print ("depth size:",self.depth_image.shape)
+        # print ("image size:",self.rgb_image.shape)
+        # print ("box:", self.box)
+
         # Extract depth value for the target pixel position
         if self.grasp_center is not None:
             depth_pixel_x = int(self.grasp_center[0])
             depth_pixel_y = int(self.grasp_center[1])
-
-            # depth_value = float(raw_depth_image[depth_pixel_y,depth_pixel_x][0])
             depth_value = float(raw_depth_image[depth_pixel_y,depth_pixel_x])
-            
             depth_in_meters = depth_value / 1000
-            print (f"depth [{depth_pixel_x},{depth_pixel_y}] = {depth_value}")
-            print (f"grasp angle: {self.grasp_angle}")
-            #  float(frame[y_center][x_center])*100.0
-
             x_cam, y_cam, z_cam = self.pixel_to_meter(self.grasp_center[0],self.grasp_center[1],depth_in_meters)
+
+            print ("pos:",x_cam, y_cam, z_cam)
+
+            centere3_depth_pixel_x = int(center3[0])
+            centere3_depth_pixel_y = int(center3[1])
+            depth_value = float(raw_depth_image[centere3_depth_pixel_y,centere3_depth_pixel_x])
+            depth_in_meters = depth_value / 1000
+            centere3_x_cam, centere3_y_cam, centere3_z_cam = self.pixel_to_meter(center3[0],center3[1],depth_in_meters)
+
+            centere1_depth_pixel_x = int(center1[0]+10)
+            centere1_depth_pixel_y = int(center1[1])
+            depth_value = float(raw_depth_image[centere1_depth_pixel_y,centere1_depth_pixel_x])
+            depth_in_meters = depth_value / 1000
+            centere1_x_cam, centere1_y_cam, centere1_z_cam = self.pixel_to_meter(center1[0]+10,center1[1],depth_in_meters)
+
+            length = np.linalg.norm ([centere3_x_cam-x_cam,centere3_y_cam-y_cam]) * 2
+            width = np.linalg.norm ([centere1_x_cam-x_cam,centere1_y_cam-y_cam]) * 2
+            print ("legnth", length)
+            print ("width", width)
+            print ("centre1_z:",centere1_z_cam," centre3_z:",centere3_z_cam)
+
             
-            # rack_pos.position.x = float(self.grasp_center[0])
-            # rack_pos.position.y = float(self.grasp_center[1])
-            # rack_pos.position.z = depth_in_meters
             rack_pos.position.x = x_cam
             rack_pos.position.y = y_cam
             rack_pos.position.z = z_cam
             rack_pos.orientation.z = self.grasp_angle
             response.probablity    = 1.0
+
+            if width>0.05 and width< 0.15:
+                if not (centere1_z_cam <0.001 or  centere3_z_cam <0.001 or z_cam < 0.001): 
+                    if length< 0.08:
+                        if z_cam > 0.82: # lower row
+                            # shift the centere (y dim) if neccessary
+                            rack_pos.position.y -= 0.2-length
+
+
+            if centere1_z_cam <0.001 or  centere3_z_cam <0.001 or z_cam < 0.001 : 
+                response.probablity    = 0.0   
+            elif length>0.22 or length< 0.08 :
+                response.probablity    = 0.0 
+            elif width>0.15 or width< 0.05 :
+                response.probablity    = 0.0 
+                
+            
         else:
             rack_pos.position.x  = -1.0
             rack_pos.position.y  = -1.0
@@ -166,6 +200,54 @@ class MinimalService(Node):
 
         if response.execute :
             print (self.depth_array)
+
+
+        
+        # height, width = raw_image.shape[:2]
+
+        # # Grasp point and color
+        # grasp_point = [[response.pose.position.x, response.pose.position.y, response.pose.position.z]]
+        # grasp_color = [[1.0, 0.0, 0.0]]
+
+        # grasp_pcd = o3d.geometry.PointCloud()
+        # grasp_pcd.points = o3d.utility.Vector3dVector(grasp_point)
+        # grasp_pcd.colors = o3d.utility.Vector3dVector(grasp_color)
+
+        # # Using numpy to generate the point cloud
+        # j, i = np.meshgrid(np.arange(width), np.arange(height))
+        # z = raw_depth_image / 1000.0
+        # x = (j - self.cx) * z / self.fx
+        # y = (i - self.cy) * z / self.fy
+
+        # raw_points = np.stack((x, y, z), axis=-1).reshape(-1, 3)
+        # rgb_points = raw_image.reshape(-1, 3) / 255.0
+
+        # scene_pcd = o3d.geometry.PointCloud()
+        # scene_pcd.points = o3d.utility.Vector3dVector(raw_points)
+        # scene_pcd.colors = o3d.utility.Vector3dVector(rgb_points)
+
+        # point = grasp_pcd.points[0]
+        # sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.005)
+        # sphere.translate(point)
+        # sphere.paint_uniform_color([1.0, 0.0, 0.0])
+
+        # sphere_pcd = sphere.sample_points_uniformly(number_of_points=500)
+
+        # o3d.visualization.draw_geometries([scene_pcd + sphere_pcd])
+
+
+        # # Extract the points within the ROI
+        # roi_points = scene_pcd.select_by_indices(scene_pcd.crop([x, y, x + width, y + height]))
+        # # Convert the ROI points to a numpy array
+        # roi_points_np = np.asarray(roi_points.points)
+
+        # # Fit a plane to the ROI points using RANSAC
+        # plane_model, inliers = o3d.geometry.plane_from_points(
+        #     roi_points_np, distance_threshold=0.01, ransac_n=3, num_iterations=1000)
+        
+        # # Visualize the fitted plane
+        # o3d.visualization.draw_geometries([roi_points, plane_model])
+
 
         torch.cuda.empty_cache()
 
@@ -189,7 +271,7 @@ class MinimalService(Node):
         y_cam = (y_pixel - self.cy) * depth / self.fy
         z_cam = depth
 
-        print ("camera", x_cam,y_cam,z_cam)
+        # print ("camera", x_cam,y_cam,z_cam)
         
         return x_cam, y_cam, z_cam
 

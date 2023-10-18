@@ -182,6 +182,72 @@ def main():
 
     o3d.visualization.draw_geometries([scene_pcd + sphere_pcd])
 
+
+    # Define the ROI box
+    x, y, width, height = 680, 228, 20, 20
+
+
+    # Define the parameters of the OrientedBoundingBox
+    center = np.array([response.pose.position.x, response.pose.position.y, response.pose.position.z])  # Center of the box
+    extent = np.array([0.1, 0.2, 0.02])    # Half extents of the box
+    rotation = np.identity(3)               # Rotation matrix (identity for no rotation)
+
+    # Create the OrientedBoundingBox
+    obb = o3d.geometry.OrientedBoundingBox(center=center, extent=extent, R=rotation)
+
+    # Crop the point cloud using the OrientedBoundingBox
+    roi_points = scene_pcd.crop(obb)
+    print ("--"*40,roi_points)
+
+
+    # # Transfer the cropped point cloud to CPU (if needed)
+    # roi_points_cpu = roi_points
+
+    # # Fit a plane to the ROI points using RANSAC
+    # plane_model, inliers = o3d.geometry.plane_from_points(
+    #     np.asarray(roi_points_cpu.points), distance_threshold=0.01, ransac_n=3, num_iterations=1000
+    # )
+
+    # # Get the normal vector of the fitted plane
+    # plane_normal = plane_model.normal
+
+    # # Calculate the angles (in degrees) of the normal vector
+    # roll_angle = np.arctan2(plane_normal[1], plane_normal[2]) * 180 / np.pi
+    # pitch_angle = np.arctan2(-plane_normal[0], np.sqrt(plane_normal[1]**2 + plane_normal[2]**2)) * 180 / np.pi
+    # yaw_angle = 0  # Assuming the plane's yaw angle is 0 since it's a 2D plane
+
+    # # Print the angles
+    # print("Roll Angle (degrees):", roll_angle)
+    # print("Pitch Angle (degrees):", pitch_angle)
+    # print("Yaw Angle (degrees):", yaw_angle)
+
+    # Visualize the point cloud and the fitted plane (optional)
+    o3d.visualization.draw_geometries([roi_points])
+
+
+
+
+    # Fit a plane to the ROI points using RANSAC
+    plane_model, inliers = o3d.geometry.plane_from_points(
+        np.asarray(roi_points.points), distance_threshold=0.01, ransac_n=3, num_iterations=1000
+    )
+
+    # Get the normal vector of the fitted plane
+    plane_normal = plane_model.normal
+
+    # Calculate the angles (in degrees) of the normal vector
+    roll_angle = np.arctan2(plane_normal[1], plane_normal[2]) * 180 / np.pi
+    pitch_angle = np.arctan2(-plane_normal[0], np.sqrt(plane_normal[1]**2 + plane_normal[2]**2)) * 180 / np.pi
+    yaw_angle = 0  # Assuming the plane's yaw angle is 0 since it's a 2D plane
+
+    # Print the angles
+    print("Roll Angle (degrees):", roll_angle)
+    print("Pitch Angle (degrees):", pitch_angle)
+    print("Yaw Angle (degrees):", yaw_angle)
+
+    # Visualize the point cloud and the fitted plane (optional)
+    o3d.visualization.draw_geometries([scene_pcd, roi_points, plane_model])
+
     minimal_client.destroy_node()
     rclpy.shutdown()
 

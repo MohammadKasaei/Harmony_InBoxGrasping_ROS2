@@ -178,12 +178,12 @@ class InboxGraspPrediction():
         input_point1 = np.array([box_centre[0]-25,box_centre[1]-30]).reshape(1,2)
         step_x = 15
         step_y = 5
-        for i in range(5):
+        for i in range(4):
             for j in range(7):
                 input_point1 = np.vstack((input_point1,(input_point1[0,0]+i*step_x,input_point1[0,1]+j*step_y)))
         
         self._input_point = input_point1        
-        self._input_label = np.ones(36)
+        self._input_label = np.ones(36-7)
         
 
     def generate_masks(self,dbg_vis = False):
@@ -242,15 +242,21 @@ class InboxGraspPrediction():
                 bs =np.array(sorted(tmp, key=lambda a_entry: a_entry[0]))
                
                 center1 = np.int16(((bs[0,0]+bs[1,0])/2,(bs[0,1]+bs[1,1])/2))        
-                center2 = np.int16(((bs[2,0]+bs[3,0])/2,(bs[2,1]+bs[3,1])/2))        
-                
-                grasp_list.append ([center,center1,center2,angle])
+                center2 = np.int16(((bs[2,0]+bs[3,0])/2,(bs[2,1]+bs[3,1])/2))   
+                     
+                center3 = np.int16(((bs[0,0]+bs[2,0])/2,(bs[0,1]+bs[2,1])/2))        
+                center4 = np.int16(((bs[1,0]+bs[3,0])/2,(bs[1,1]+bs[3,1])/2))        
+               
+                grasp_list.append ([center,center1,center2,center3,center4,angle,box])
                 if vis:
                     cv2.drawContours(self.image_rgb, contours, j, (255, 255, 0), thickness)                
                     cv2.drawContours(self.image_rgb,[box],0,(0,255,255),thickness)
                     cv2.circle(self.image_rgb, center=center, radius=10, color = (255,255,255), thickness=-1) 
                     cv2.circle(self.image_rgb, center=center1, radius=10, color = (255,0,255), thickness=5) 
                     cv2.circle(self.image_rgb, center=center2, radius=10, color = (255,0,255), thickness=5) 
+                    cv2.circle(self.image_rgb, center=center3, radius=10, color = (255,0,0), thickness=5) 
+                    cv2.circle(self.image_rgb, center=center4, radius=10, color = (255,0,0), thickness=5) 
+
             j += 1
 
         # if grasp_list == [] :
