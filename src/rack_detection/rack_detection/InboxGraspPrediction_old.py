@@ -1,3 +1,4 @@
+
 import cv2
 import numpy as np
 from cv_bridge import CvBridge
@@ -68,7 +69,7 @@ class InboxGraspPrediction():
 
     def find_box_centre(self,vis_masks = False,vis_output=False,color_picker = False):
         # Define the region of interest (ROI) coordinates
-        x_offset = 300  # starting x-coordinate
+        x_offset = 200  # starting x-coordinate
         y_offset = 10  # starting y-coordinate
         width    = 700  # width of the ROI
         height   = 350  # height of the ROI
@@ -85,24 +86,26 @@ class InboxGraspPrediction():
         # Gaussian blur to reduce noise
         blurred = cv2.GaussianBlur(result, (3, 3), 0)
 
+
         # Define a sharpening kernel. One of the commonly used sharpening kernel is:
-        sharpening_kernel = 1*np.array([[-0.35, -0.35, -0.35],
-                              [-0.35, 4, -0.35],
+        sharpening_kernel = 1.1*np.array([[-0.35, -0.35, -0.35],
+                              [-0.35, 3.5, -0.35],
                               [-0.35, -0.35, -0.35]])
         
         
 
         # Apply the sharpening kernel to the input image using cv2.filter2D function
-        #sharpened_image = cv2.filter2D(blurred, -1, sharpening_kernel)
+        sharpened_image = cv2.filter2D(blurred, -1, sharpening_kernel)
 
         # alpha = 0.7  # Weight for the sharpened image. (0 <= alpha <= 1)
         # blended = cv2.addWeighted(image, 1 - alpha, sharpened_image, alpha, 0)
 
-        #blurred = cv2.GaussianBlur(sharpened_image, (3, 3), 0)
-        
+        blurred = cv2.GaussianBlur(sharpened_image, (3, 3), 0)
+
+
         # Apply Canny edge detection
         # result = cv2.Canny(blurred, 50, 150)   
-        result = cv2.Canny(blurred, 50, 150)   
+        result = cv2.Canny(blurred, 50, 250)   
         
         
         if vis_masks:
@@ -111,7 +114,7 @@ class InboxGraspPrediction():
         # Define the kernel for dilation
         kernel = np.ones((5, 5), np.uint8)  # Adjust the kernel size according to your needs
         # Perform dilation
-        dilated = cv2.dilate(result, kernel, iterations=2)
+        dilated = cv2.dilate(result, kernel, iterations=3)
         if vis_output:
             cv2.imshow('dilated', dilated)
 
@@ -143,26 +146,25 @@ class InboxGraspPrediction():
             # perimeter = cv2.arcLength(contour, True)
             x, y, w, h = cv2.boundingRect(contour)
             aspect_ratio = float(w)/h
-            #print ("aspect_ratio:",aspect_ratio)
 
             # Filtering conditions
             # if min_perimeter < perimeter < max_perimeter and 0.9 < aspect_ratio < 1.1:  # Adjust as needed
-            if  0.5 < aspect_ratio < 3:  # Adjust as needed
+            if  0.5 < aspect_ratio < 2:  # Adjust as needed
                 filtered_contours.append(contour)
 
         # # Define a size threshold (in terms of contour area)
         min_contour_area = 700 #3000  # Example value, adjust as needed
         max_contour_area = 80000  # Example value, adjust as needed
-        
-        #for c in filtered_contours:
-        #    print ("contour size:",cv2.contourArea(c))
-        #cv2.waitKey()
         # Filter contours by size
+        for c in filtered_contours:
+            print ("contour size:",cv2.contourArea(c))
+        
+        
         filtered_contours2 = [contour for contour in filtered_contours if min_contour_area < cv2.contourArea(contour) < max_contour_area]
         
 
         if filtered_contours2 != []:
-            print ("number of contour:", len(filtered_contours2))
+            print ("number of racks:", len(filtered_contours2))
             the_most_left = None
             if len(filtered_contours2) > 1:
                 for c in filtered_contours2:
@@ -333,3 +335,4 @@ class InboxGraspPrediction():
         
 
         return grasp_list
+
