@@ -120,7 +120,10 @@ class MinimalService(Node):
             print ("grasp list:\n", gs_list)
             plt.imshow(self.vision.image_rgb)
             plt.axis('on')
+            
+            cv2.waitKey(0)
             plt.show()
+            
 
         print ("done")
         key = 0
@@ -151,7 +154,13 @@ class MinimalService(Node):
             depth_value = float(raw_depth_image[depth_pixel_y,depth_pixel_x])
             depth_in_meters = depth_value / 1000
             x_cam, y_cam, z_cam = self.pixel_to_meter(self.grasp_center[0],self.grasp_center[1],depth_in_meters)
-
+            idx =0 
+            while depth_value<0.01 and idx<10:
+                depth_pixel_x = int(self.grasp_center[0])
+                depth_pixel_y = int(self.grasp_center[1])
+                depth_value = float(raw_depth_image[depth_pixel_y+idx,depth_pixel_x+idx])        
+                depth_in_meters = depth_value / 1000
+                x_cam, y_cam, z_cam = self.pixel_to_meter(self.grasp_center[0],self.grasp_center[1],depth_in_meters)
             print ("pos:",x_cam, y_cam, z_cam)
 
             centere3_depth_pixel_x = int(center3[0])
@@ -171,10 +180,8 @@ class MinimalService(Node):
             print ("legnth", length)
             print ("width", width)
             print ("angle",self.grasp_angle)
-            print ("centre1_z:",centere1_z_cam," centre3_z:",centere3_z_cam)
+            print ("centre1_z:",centere1_z_cam," centre3_z:", centere3_z_cam)
 
-
-            
             rack_pos.position.x = x_cam
             rack_pos.position.y = y_cam
             rack_pos.position.z = z_cam
@@ -186,8 +193,8 @@ class MinimalService(Node):
                     if length< 0.16:
                         if z_cam > 0.80: # lower row
                             # shift the centere (y dim) if neccessary
-                            offset_x = (0.2-length)*np.sin(self.grasp_angle*np.pi/180)
-                            offset_y = (0.2-length)*np.cos(self.grasp_angle*np.pi/180)
+                            offset_x = 0*(0.2-length)*np.cos(self.grasp_angle*np.pi/180)
+                            offset_y = 0*(0.2-length)*np.sin(self.grasp_angle*np.pi/180)
                             
                             print ("offsets:",offset_x,offset_y)
                             rack_pos.position.x -= offset_x

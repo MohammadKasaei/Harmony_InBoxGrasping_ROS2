@@ -183,13 +183,11 @@ def main():
     o3d.visualization.draw_geometries([scene_pcd + sphere_pcd])
 
 
-    # Define the ROI box
-    x, y, width, height = 680, 228, 20, 20
-
+    
 
     # Define the parameters of the OrientedBoundingBox
     center = np.array([response.pose.position.x, response.pose.position.y, response.pose.position.z])  # Center of the box
-    extent = np.array([0.1, 0.2, 0.02])    # Half extents of the box
+    extent = np.array([0.1, 0.2, 0.05])    # Half extents of the box
     rotation = np.identity(3)               # Rotation matrix (identity for no rotation)
 
     # Create the OrientedBoundingBox
@@ -198,31 +196,30 @@ def main():
     # Crop the point cloud using the OrientedBoundingBox
     roi_points = scene_pcd.crop(obb)
     print ("--"*40,roi_points)
+    o3d.visualization.draw_geometries([roi_points + sphere_pcd])
+    pcd = roi_points
+
+    
+    # Estimate normals
+    o3d.estimate_normals(pcd, search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+
+    # Apply RANSAC to find the plane
+    plane_model, inliers = pcd.segment_plane(distance_threshold=0.01,
+                                            ransac_n=3,
+                                            num_iterations=1000)
+
+    [a, b, c, d] = plane_model
+    print(f"Plane equation: {a:.2f}x + {b:.2f}y + {c:.2f}z + {d:.2f} = 0")
+
+    # If you want to visualize the inliers and outliers
+    inlier_cloud = pcd.select_by_index(inliers)
+    inlier_cloud.paint_uniform_color([1.0, 0, 0])
+    outlier_cloud = pcd.select_by_index(inliers, invert=True)
+
+    # Visualize
+    o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
 
-    # # Transfer the cropped point cloud to CPU (if needed)
-    # roi_points_cpu = roi_points
-
-    # # Fit a plane to the ROI points using RANSAC
-    # plane_model, inliers = o3d.geometry.plane_from_points(
-    #     np.asarray(roi_points_cpu.points), distance_threshold=0.01, ransac_n=3, num_iterations=1000
-    # )
-
-    # # Get the normal vector of the fitted plane
-    # plane_normal = plane_model.normal
-
-    # # Calculate the angles (in degrees) of the normal vector
-    # roll_angle = np.arctan2(plane_normal[1], plane_normal[2]) * 180 / np.pi
-    # pitch_angle = np.arctan2(-plane_normal[0], np.sqrt(plane_normal[1]**2 + plane_normal[2]**2)) * 180 / np.pi
-    # yaw_angle = 0  # Assuming the plane's yaw angle is 0 since it's a 2D plane
-
-    # # Print the angles
-    # print("Roll Angle (degrees):", roll_angle)
-    # print("Pitch Angle (degrees):", pitch_angle)
-    # print("Yaw Angle (degrees):", yaw_angle)
-
-    # Visualize the point cloud and the fitted plane (optional)
-    o3d.visualization.draw_geometries([roi_points])
 
 
 
@@ -235,15 +232,15 @@ def main():
     # Get the normal vector of the fitted plane
     plane_normal = plane_model.normal
 
-    # Calculate the angles (in degrees) of the normal vector
-    roll_angle = np.arctan2(plane_normal[1], plane_normal[2]) * 180 / np.pi
-    pitch_angle = np.arctan2(-plane_normal[0], np.sqrt(plane_normal[1]**2 + plane_normal[2]**2)) * 180 / np.pi
-    yaw_angle = 0  # Assuming the plane's yaw angle is 0 since it's a 2D plane
+    # # Calculate the angles (in degrees) of the normal vector
+    # roll_angle = np.arctan2(plane_normal[1], plane_normal[2]) * 180 / np.pi
+    # pitch_angle = np.arctan2(-plane_normal[0], np.sqrt(plane_normal[1]**2 + plane_normal[2]**2)) * 180 / np.pi
+    # yaw_angle = 0  # Assuming the plane's yaw angle is 0 since it's a 2D plane
 
-    # Print the angles
-    print("Roll Angle (degrees):", roll_angle)
-    print("Pitch Angle (degrees):", pitch_angle)
-    print("Yaw Angle (degrees):", yaw_angle)
+    # # Print the angles
+    # print("Roll Angle (degrees):", roll_angle)
+    # print("Pitch Angle (degrees):", pitch_angle)
+    # print("Yaw Angle (degrees):", yaw_angle)
 
     # Visualize the point cloud and the fitted plane (optional)
     o3d.visualization.draw_geometries([scene_pcd, roi_points, plane_model])

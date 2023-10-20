@@ -508,5 +508,6 @@
         "/home/mohammad/ros2_humble/install/ament_clang_format/lib/python3.10/site-packages",
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
-    ]
+    ],
+    "cmake.sourceDirectory": "/home/mohammad/Harmony_InBoxGrasping_ROS2/build/rack_detection_interface/rack_detection_interface__py"
 }

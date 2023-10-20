@@ -86,9 +86,26 @@ class InboxGraspPrediction():
         # Gaussian blur to reduce noise
         blurred = cv2.GaussianBlur(result, (3, 3), 0)
 
+
+        # Define a sharpening kernel. One of the commonly used sharpening kernel is:
+        sharpening_kernel = 1.1*np.array([[-0.35, -0.35, -0.35],
+                              [-0.35, 3.5, -0.35],
+                              [-0.35, -0.35, -0.35]])
+        
+        
+
+        # Apply the sharpening kernel to the input image using cv2.filter2D function
+        sharpened_image = cv2.filter2D(blurred, -1, sharpening_kernel)
+
+        # alpha = 0.7  # Weight for the sharpened image. (0 <= alpha <= 1)
+        # blended = cv2.addWeighted(image, 1 - alpha, sharpened_image, alpha, 0)
+
+        blurred = cv2.GaussianBlur(sharpened_image, (3, 3), 0)
+
+
         # Apply Canny edge detection
         # result = cv2.Canny(blurred, 50, 150)   
-        result = cv2.Canny(blurred, 50, 200)   
+        result = cv2.Canny(blurred, 50, 250)   
         
         
         if vis_masks:
@@ -136,9 +153,13 @@ class InboxGraspPrediction():
                 filtered_contours.append(contour)
 
         # # Define a size threshold (in terms of contour area)
-        min_contour_area = 1500 #3000  # Example value, adjust as needed
+        min_contour_area = 700 #3000  # Example value, adjust as needed
         max_contour_area = 80000  # Example value, adjust as needed
         # Filter contours by size
+        for c in filtered_contours:
+            print ("contour size:",cv2.contourArea(c))
+        
+        
         filtered_contours2 = [contour for contour in filtered_contours if min_contour_area < cv2.contourArea(contour) < max_contour_area]
         
 
