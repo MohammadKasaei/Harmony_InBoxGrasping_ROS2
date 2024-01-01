@@ -33,7 +33,7 @@ Click the links below to download the checkpoint for the corresponding model typ
 - `vit_b`: [ViT-B SAM model.](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth)
 
 
-After downloading, put the models into `models/` folder which is next to the src folder. By defualt we used `vit_b` model, but it can be replace by the others.
+After downloading, put the models into `models/` folder which is next to the src folder. By defualt we used `vit_b` model, but it can be replaced by the others.
 
 
 # Compile and Running
