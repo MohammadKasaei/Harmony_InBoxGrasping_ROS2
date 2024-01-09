@@ -24,6 +24,12 @@ import datetime
 
 import torch
 
+from message_filters import (
+    TimeSynchronizer, 
+    ApproximateTimeSynchronizer, 
+    Subscriber
+)
+
 from .InboxGraspPrediction import InboxGraspPrediction
 # in my laptop we need to set this param to get it run on the GPU, not sure if we need this always.
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512" 
@@ -267,23 +273,13 @@ class MinimalService(Node):
 
         self.cb_group_ = ReentrantCallbackGroup()
 
-        rgb_subscription = self.create_subscription(
-            CompressedImage,
-            "/myumi_005/sensors/top_azure/rgb/image_raw/compressed",  
-            self.rgb_image_callback,
-            1,
-            callback_group=self.cb_group_
-        )
+        rgb_subscription = Subscriber(self, CompressedImage, "/myumi_005/sensors/top_azure/rgb/image_raw/compressed")
+        depth_subscription = Subscriber(self, Image, "/myumi_005/sensors/top_azure/depth_to_rgb/image_raw")
 
-        depth_subscription = self.create_subscription(
-            Image,
-            "/myumi_005/sensors/top_azure/depth_to_rgb/image_raw",
-            self.depth_image_callback,
-            1,
-            callback_group=self.cb_group_
-        )
+        self.ats = ApproximateTimeSynchronizer([rgb_subscription, depth_subscription], queue_size=1, slop=0.05)
+        self.ats.registerCallback(self.rgbd_image_callback)
 
-        camera_info_subscription = self.create_subscription(
+        self.camera_info_subscription = self.create_subscription(
             CameraInfo,
             '/myumi_005/sensors/top_azure/rgb/camera_info',
             self.camera_info_callback,
@@ -312,12 +308,14 @@ class MinimalService(Node):
         self.tf_dock_republish_dt = 0.1 # dock tf republish time interval
 
     def init(self):
-        self.initialization_timer.cancel()
+        self.get_logger().warn("Initialization...")
         try:
             rgb_to_base_tf = self.tf_buffer.lookup_transform(
                 'myumi_005_top_azure_rgb_camera_link',
                 'myumi_005_base_link',
                 rclpy.time.Time())
+            self.initialization_timer.cancel()
+            self.get_logger().info("Rack detector service initialized")
             self.q_rgb_to_base = [
                 rgb_to_base_tf.transform.rotation.x,
                 rgb_to_base_tf.transform.rotation.y,
@@ -325,25 +323,18 @@ class MinimalService(Node):
                 rgb_to_base_tf.transform.rotation.w
             ]
         except TransformException as ex:
-            self.get_logger().info(
+            self.get_logger().error(
                 f'Could not get rgb-to-base transform: {ex}')
-        self.q_rgb_to_base = [-0.684, 0.688, -0.185, -0.157] # qx, qy, qz, qw
-            
-        self.get_logger().info("Rack detector service initialized")
+        self.q_rgb_to_base = [-0.684, 0.688, -0.185, -0.157] # qx, qy, qz, qw        
 
     def get_last_transform(self, from_frame, to_frame):
-        try:
-            transform = self.tf_buffer.lookup_transform(
-                from_frame,
-                to_frame,
-                rclpy.time.Time())
-            return transform
-        except TransformException as ex:
-            self.get_logger().info(
-                f'Could not get transform: {ex}')
+        transform = self.tf_buffer.lookup_transform(
+            from_frame,
+            to_frame,
+            rclpy.time.Time())
+        return transform
 
     def camera_info_callback(self, msg: CameraInfo):
-        # TODO: check timestamp
         self.fx = msg.k[0]
         self.fy = msg.k[4]
         self.cx = msg.k[2]
@@ -353,7 +344,9 @@ class MinimalService(Node):
         self.vision.fy = msg.k[4]
         self.vision.cx = msg.k[2]
         self.vision.cy = msg.k[5]
-        # Use these parameters as needed
+        
+        self.destroy_subscription(self.camera_info_subscription)
+        self.get_logger().info("Saved parameters from CameraInfo")
 
     def rack_detection_callback(self, request, response):
         masks, scores = [],[]
@@ -377,8 +370,10 @@ class MinimalService(Node):
         self.vision.image = self.rgb_image.copy()      
         self.grasp_center = None
 
-        masks, scores = self.vision.generate_masks(dbg_vis=request.dbg_vis)
+        self.rgb_image = None
+        self.depth_image = None
 
+        masks, scores = self.vision.generate_masks(dbg_vis=request.dbg_vis)
 
         for i, (mask, score) in enumerate(zip(masks, scores)):
 
@@ -484,11 +479,27 @@ class MinimalService(Node):
         
         # Publish tf w.r.t. APRIL 2 (marker on wall)
         if response.probablity  != 0.0:
+
+            self.tf_msg_rgb_to_rack = TransformStamped()
+            self.tf_msg_rgb_to_rack.header.stamp = self.get_clock().now().to_msg()
+            self.tf_msg_rgb_to_rack.header.frame_id = "myumi_005_top_azure_rgb_camera_link"
+            self.tf_msg_rgb_to_rack.child_frame_id = "rack_for_grasp"
+            self.tf_msg_rgb_to_rack.transform.translation.x = p_rgb_to_rack[0]
+            self.tf_msg_rgb_to_rack.transform.translation.y = p_rgb_to_rack[1]
+            self.tf_msg_rgb_to_rack.transform.translation.z = p_rgb_to_rack[2]
+            self.tf_msg_rgb_to_rack.transform.rotation.x = q_rgb_to_rack[0]
+            self.tf_msg_rgb_to_rack.transform.rotation.y = q_rgb_to_rack[1]
+            self.tf_msg_rgb_to_rack.transform.rotation.z = q_rgb_to_rack[2]
+            self.tf_msg_rgb_to_rack.transform.rotation.w = q_rgb_to_rack[3]
+            self.tf_broadcaster.sendTransform(self.tf_msg_rgb_to_rack)
+            self.get_logger().info("Publishing rack pose w.r.t. rgb_camera_link")
+            
             # get wall-to-rgb transform
+            
             try:
                 wall_to_rgb = self.get_last_transform("april_2", "myumi_005_top_azure_rgb_camera_link") 
             except:
-                self.get_logger().error("No transformation available between april_2 and myumi_005_top_azure_rgb_camera_link. Closing.")
+                self.get_logger().error("No transformation available between april_2 and myumi_005_top_azure_rgb_camera_link.")
                 return response
 
             # convert wall-to-rgb transform to homogenous matrix
@@ -518,7 +529,7 @@ class MinimalService(Node):
 
             self.wall_to_rack_tf_stay_alive_count = 0
             self.tf_msg_wall_to_rack = TransformStamped()
-            self.tf_msg_wall_to_rack.header.stamp = self.get_clock().now().to_msg()
+            self.tf_msg_wall_to_rack.header.stamp = self.tf_msg_rgb_to_rack.header.stamp
             self.tf_msg_wall_to_rack.header.frame_id = "april_2"
             self.tf_msg_wall_to_rack.child_frame_id = "rack_for_dock"
             self.tf_msg_wall_to_rack.transform.translation.x = p_wall_to_rack[0]
@@ -530,20 +541,6 @@ class MinimalService(Node):
             self.tf_msg_wall_to_rack.transform.rotation.w = q_wall_to_rack[3]
             self.tf_broadcaster.sendTransform(self.tf_msg_wall_to_rack)
             self.get_logger().info("Publishing rack pose w.r.t. april_2 marker (wall)")
-
-            self.tf_msg_rgb_to_rack = TransformStamped()
-            self.tf_msg_rgb_to_rack.header.stamp = self.get_clock().now().to_msg()
-            self.tf_msg_rgb_to_rack.header.frame_id = "myumi_005_top_azure_rgb_camera_link"
-            self.tf_msg_rgb_to_rack.child_frame_id = "rack_for_grasp"
-            self.tf_msg_rgb_to_rack.transform.translation.x = p_rgb_to_rack[0]
-            self.tf_msg_rgb_to_rack.transform.translation.y = p_rgb_to_rack[1]
-            self.tf_msg_rgb_to_rack.transform.translation.z = p_rgb_to_rack[2]
-            self.tf_msg_rgb_to_rack.transform.rotation.x = q_rgb_to_rack[0]
-            self.tf_msg_rgb_to_rack.transform.rotation.y = q_rgb_to_rack[1]
-            self.tf_msg_rgb_to_rack.transform.rotation.z = q_rgb_to_rack[2]
-            self.tf_msg_rgb_to_rack.transform.rotation.w = q_rgb_to_rack[3]
-            self.tf_broadcaster.sendTransform(self.tf_msg_rgb_to_rack)
-            self.get_logger().info("Publishing rack pose w.r.t. rgb_camera_link")
 
             # wall_to_rack TF stay-alive timer 
             self.wall_to_rack_tf_stay_alive_count = 0
@@ -565,7 +562,6 @@ class MinimalService(Node):
                 self.get_logger().info("Stop re-publishing rack pose w.r.t. april_2 marker (wall)")
             else:
                 # update timestamp and send again
-                self.tf_msg_wall_to_rack.header.stamp = self.get_clock().now().to_msg()
                 self.tf_msg_wall_to_rack.header.stamp = self.get_clock().now().to_msg()
                 self.tf_broadcaster.sendTransform(self.tf_msg_wall_to_rack)
                 self.wall_to_rack_tf_stay_alive_count += 1
@@ -590,19 +586,13 @@ class MinimalService(Node):
         return x_cam, y_cam, z_cam
 
 
-    def rgb_image_callback(self,msg):
-        # TODO: check timestamp
+    def rgbd_image_callback(self, rgb_msg, depth_msg):
         try:
-            self.rgb_image = cv_bridge.compressed_imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            self.rgb_image = cv_bridge.compressed_imgmsg_to_cv2(rgb_msg, desired_encoding="bgr8")
+            self.depth_image = cv_bridge.imgmsg_to_cv2(depth_msg, desired_encoding="32FC1") 
         except Exception as e:
             self.get_logger().error(f"Error: {str(e)}")
 
-    def depth_image_callback(self,msg):
-        # TODO: check timestamp
-        try:
-            self.depth_image = cv_bridge.imgmsg_to_cv2(msg, desired_encoding="32FC1")          
-        except Exception as e:
-            self.get_logger().error(f"Error: {str(e)}")
 
 def main():
 
