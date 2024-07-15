@@ -70,3 +70,6 @@ Note that the three zeros in the client side (`0 0 0`) are a set of parameters u
 Here is the video showing the performance in the real robot:
 
 ![alt](images/yumi_video.gif)
+
+
+The full video is available online [here](https://www.youtube.com/watch?v=JD7b1nMzVdY&feature=youtu.be)
