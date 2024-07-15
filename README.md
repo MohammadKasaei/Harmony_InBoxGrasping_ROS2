@@ -66,3 +66,6 @@ In case everything is working, you will see an image similar to the following:
 
 
 Note that the three zeros in the client side (`0 0 0`) are a set of parameters used for debuging purpose. 
+
+Here is the video showing the performance in the real robot:
+![alt](images/yumi_video.gif)
