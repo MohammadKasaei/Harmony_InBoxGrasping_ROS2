@@ -52,7 +52,7 @@ and then run the service using the following command:
 ros2 run rack_detection service
 ```
 
-Then, open another terminal, go to the directory (`Harmony_InBoxGrasping_ROS2`) and again source the install directory:
+Then, open another terminal, go to the directory (`Harmony_InBoxGrasping_ROS2`), and again source the install directory:
 ```
 cd Harmony_InBoxGrasping_ROS2
 source install/local_setup.bash 
@@ -65,7 +65,8 @@ In case everything is working, you will see an image similar to the following:
 ![alt](images/img_sample.png)
 
 
-Note that the three zeros in the client side (`0 0 0`) are a set of parameters used for debuging purpose. 
+Note that the three zeros in the client side (`0 0 0`) are a set of parameters used for debugging purposes. 
 
 Here is the video showing the performance in the real robot:
+
 ![alt](images/yumi_video.gif)
