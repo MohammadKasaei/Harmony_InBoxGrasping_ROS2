@@ -1,5 +1,9 @@
 # Harmony_InBoxGrasping_ROS2
 
+This repository provides a ROS2-based implementation for robust in-box object grasping using the **ABB mobile manipulator** platform. The system integrates perception, planning, and control modules to enable effective object detection, pose estimation, and grasp execution within constrained environments like storage bins or boxes.
+
+![alt](images/abb.jpg)
+
 # Dependencies
 The code requires `python>=3.10`, as well as `pytorch>=2.0.1` and 'CUDA Version: 12.0'
 
@@ -71,5 +75,5 @@ Here is the video showing the performance in the real robot:
 
 ![alt](images/yumi_video.gif)
 
-
+# Vidoe
 The full video is available online [here](https://www.youtube.com/watch?v=JD7b1nMzVdY&feature=youtu.be)
