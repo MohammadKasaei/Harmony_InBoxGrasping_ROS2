@@ -77,5 +77,5 @@ Here is the video showing the performance in the real robot:
 
 ![alt](images/yumi_video.gif)
 
-# Vidoe
+# Full Video
 The full video is available online [here](https://www.youtube.com/watch?v=JD7b1nMzVdY&feature=youtu.be)
